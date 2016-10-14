@@ -1,7 +1,10 @@
 'use strict';
 
+require('dotenv').config();
+
 const fs = require('fs');
 const fileType = require('file-type');
+const AWS = require('aws-sdk');
 
 const filename = process.argv[2] || '';
 
@@ -32,6 +35,13 @@ const parseFile = (fileBuffer) => {
   return file;
 };
 
+const s3 = new AWS.S3({
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  }
+});
+
 const upload = (file) => {
   const options = {
     // get the bucket name from your AWS s3 console
@@ -45,14 +55,21 @@ const upload = (file) => {
     // pick a file name for s3 to upload
     Key: `test/test.${file.ext}`,
   };
-  return Promise.resolve(options);
+
+  return new Promise((resolve, reject) => {
+    s3.upload(options, (error, data) =>{
+      if (error) {
+        reject(error);
+      }
+      resolve(data);
+    });
+  });
 };
 
 // dont actually upload yet, just pass the data down the Promise chain
-const logMessage = (upload) => {
-  // get rid of the stream for now
-  delete upload.Body;
-  console.log(`the upload options are ${JSON.stringify(upload)}`);
+const logMessage = (response) => {
+// turn the pojo into a string so that
+  console.log(`the response from AWS was ${JSON.stringify(response)}`);
 };
 
 readFile(filename)
